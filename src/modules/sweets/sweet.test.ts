@@ -119,11 +119,20 @@ describe('Sweets Module', () => {
   describe('GET /api/sweets/search', () => {
     it('should search sweets by name and price', async () => {
       // Create sweets for search
-      await request(app).post('/api/sweets').set('Authorization', `Bearer ${adminToken}`).send({ name: 'SearchTarget', category: 'Test', price: 10, quantity: 10 });
-      await request(app).post('/api/sweets').set('Authorization', `Bearer ${adminToken}`).send({ name: 'OtherSweet', category: 'Test', price: 20, quantity: 10 });
+      const sweet1 = await request(app).post('/api/sweets').set('Authorization', `Bearer ${adminToken}`).send({ name: 'SearchTarget', category: 'Test', price: 10, quantity: 10 });
+      expect(sweet1.status).toBe(201);
+
+      const sweet2 = await request(app).post('/api/sweets').set('Authorization', `Bearer ${adminToken}`).send({ name: 'OtherSweet', category: 'Test', price: 20, quantity: 10 });
+      expect(sweet2.status).toBe(201);
+
+      // Verify sweets exist before search
+      const allSweets = await request(app).get('/api/sweets').set('Authorization', `Bearer ${userToken}`);
+      expect(allSweets.status).toBe(200);
+      expect(allSweets.body.length).toBeGreaterThanOrEqual(2);
 
       const res = await request(app)
-        .get('/api/sweets/search?name=Target&maxPrice=15')
+        .get('/api/sweets/search')
+        .query({ name: 'Target', maxPrice: 15 })
         .set('Authorization', `Bearer ${userToken}`);
       
       expect(res.status).toBe(200);
@@ -140,6 +149,7 @@ describe('Sweets Module', () => {
         .post('/api/sweets')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'To Update', category: 'Test', price: 1, quantity: 10 });
+      expect(createRes.status).toBe(201);
       
       const sweetId = createRes.body.sweet._id;
 
@@ -159,6 +169,7 @@ describe('Sweets Module', () => {
         .post('/api/sweets')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'To Delete', category: 'Test', price: 1, quantity: 10 });
+      expect(createRes.status).toBe(201);
       
       const sweetId = createRes.body.sweet._id;
 

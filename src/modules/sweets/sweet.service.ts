@@ -26,8 +26,8 @@ export const searchSweets = async (query: any) => {
   }
   if (query.minPrice || query.maxPrice) {
     filter.price = {};
-    if (query.minPrice) filter.price.$gte = Number(query.minPrice);
-    if (query.maxPrice) filter.price.$lte = Number(query.maxPrice);
+    if (query.minPrice) filter.price.$gte = parseFloat(query.minPrice);
+    if (query.maxPrice) filter.price.$lte = parseFloat(query.maxPrice);
   }
 
   return await Sweet.find(filter);
