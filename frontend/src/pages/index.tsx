@@ -8,6 +8,24 @@ import { SweetsGrid } from '@/components/SweetGrid';
 import { AdminPanel } from '@/components/AdminPanel';
 import { AuthDialog } from '@/components/AuthDialog';
 import { Footer } from '@/components/Footer';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { categories } from '@/data/mockSweets';
 import { mockSweets } from '@/data/mockSweets';
 import { Sweet } from '@/types/sweet';
 import { toast } from '@/hooks/use-toast';
@@ -29,6 +47,16 @@ const Index = () => {
 
   // Cart state
   const [cartCount, setCartCount] = useState(0);
+
+  // Edit state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editData, setEditData] = useState({
+    id: '',
+    name: '',
+    category: '',
+    price: '',
+    quantity: '',
+  });
 
   // Max price for slider
   const maxPrice = useMemo(() => Math.max(...sweets.map((s) => s.price)), [sweets]);
@@ -175,10 +203,47 @@ const Index = () => {
   };
 
   const handleEditSweet = (sweet: Sweet) => {
-    toast({
-      title: 'Edit mode',
-      description: `Editing ${sweet.name} - full edit dialog coming soon!`,
+    setEditData({
+      id: sweet.id,
+      name: sweet.name,
+      category: sweet.category,
+      price: String(sweet.price),
+      quantity: String(sweet.quantity),
     });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateSweet = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !editData.id) return;
+    api
+      .updateSweet(token, editData.id, {
+        name: editData.name,
+        category: editData.category,
+        price: parseFloat(editData.price),
+        quantity: parseInt(editData.quantity),
+      })
+      .then((res) => {
+        setSweets((prev) =>
+          prev.map((s) =>
+            s.id === editData.id
+              ? {
+                  id: res.sweet._id,
+                  name: res.sweet.name,
+                  category: res.sweet.category,
+                  price: res.sweet.price,
+                  quantity: res.sweet.quantity,
+                }
+              : s
+          )
+        );
+        toast({ title: 'Sweet updated', description: `${res.sweet.name} has been updated.` });
+        setIsEditDialogOpen(false);
+        setEditData({ id: '', name: '', category: '', price: '', quantity: '' });
+      })
+      .catch((err) => {
+        toast({ title: 'Update failed', description: err?.message || 'Error updating sweet' });
+      });
   };
 
   return (
@@ -254,6 +319,82 @@ const Index = () => {
         }
         onSuccess={handleAuthSuccess}
       />
+
+      {/* Edit Sweet Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Edit Sweet</DialogTitle>
+            <DialogDescription>Update sweet details</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateSweet} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editData.name}
+                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <Select
+                  value={editData.category}
+                  onValueChange={(value) => setEditData({ ...editData, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories
+                      .filter((c) => c.value !== 'all')
+                      .map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.emoji} {cat.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Price ($)</Label>
+                <Input
+                  id="edit-price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editData.price}
+                  onChange={(e) => setEditData({ ...editData, price: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-quantity">Quantity</Label>
+                <Input
+                  id="edit-quantity"
+                  type="number"
+                  min="0"
+                  value={editData.quantity}
+                  onChange={(e) => setEditData({ ...editData, quantity: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="candy">
+                Save Changes
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
